@@ -73,21 +73,22 @@ func main() {
 	// Output results based on format
 	switch *format {
 	case "json":
-		outputJSON(items)
+		err := outputJSON(items)
+		if err != nil {
+			log.Printf("Error outputting JSON: %v", err)
+		}
 	case "text":
 		outputText(items)
 	default:
 		log.Printf("Unknown format: %s. Supported formats: json, text", *format)
-		os.Exit(1)
 	}
 }
 
-func outputJSON(items []rssreader.RssItem) {
+func outputJSON(items []rssreader.RssItem) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(items); err != nil {
-		log.Printf("Error encoding JSON: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("Encoding error: %w", err)
 	}
 }
 
