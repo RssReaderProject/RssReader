@@ -88,8 +88,9 @@ func outputJSON(items []rssreader.RssItem) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(items); err != nil {
-		return fmt.Errorf("Encoding error: %w", err)
+		return fmt.Errorf("encoding error: %w", err)
 	}
+	return nil
 }
 
 func outputText(items []rssreader.RssItem) {
