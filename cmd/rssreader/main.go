@@ -61,7 +61,6 @@ func main() {
 
 	// Create context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
-	defer cancel()
 
 	// Parse RSS feeds
 	items, err := rssreader.Parse(ctx, urlList)
@@ -69,6 +68,8 @@ func main() {
 		log.Printf("Error parsing RSS feeds: %v", err)
 		os.Exit(1)
 	}
+
+	defer cancel()
 
 	// Output results based on format
 	switch *format {
