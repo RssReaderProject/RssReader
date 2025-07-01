@@ -18,7 +18,7 @@ type RssItem struct {
 
 // Parse fetches and parses RSS feeds from the provided URLs.
 // It returns a slice of RssItem and any error encountered during parsing.
-func Parse(_ context.Context, urls []string) ([]RssItem, error) {
+func Parse(_ context.Context, _ []string) ([]RssItem, error) {
 	items := []RssItem{
 		{
 			Title:       "Test",
