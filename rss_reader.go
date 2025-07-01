@@ -103,12 +103,13 @@ func parseSingleFeed(ctx context.Context, url string) ([]RssItem, error) {
 		}
 
 		// Handle publish date
-		if item.PublishedParsed != nil {
+		switch {
+		case item.PublishedParsed != nil:
 			rssItem.PublishDate = *item.PublishedParsed
-		} else if item.UpdatedParsed != nil {
+		case item.UpdatedParsed != nil:
 			rssItem.PublishDate = *item.UpdatedParsed
-		} else {
-			rssItem.PublishDate = time.Now()
+		default:
+			rssItem.PublishDate = time.Time{}
 		}
 
 		items = append(items, rssItem)

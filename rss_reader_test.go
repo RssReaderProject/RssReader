@@ -11,7 +11,7 @@ import (
 
 // testServer creates a mock HTTP server that returns the given RSS content
 func testServer(content string, contentType string) *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if contentType != "" {
 			w.Header().Set("Content-Type", contentType)
 		}
@@ -35,10 +35,10 @@ func TestParse_EmptyURLs(t *testing.T) {
 
 func TestParse_SingleValidFeed(t *testing.T) {
 	// Create a mock server that returns valid RSS
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+		_, err := fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
     <title>Test Feed</title>
@@ -58,6 +58,9 @@ func TestParse_SingleValidFeed(t *testing.T) {
     </item>
   </channel>
 </rss>`)
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -97,10 +100,10 @@ func TestParse_SingleValidFeed(t *testing.T) {
 
 func TestParse_MultipleValidFeeds(t *testing.T) {
 	// Create two mock servers
-	server1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+		_, err := fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
     <title>Feed 1</title>
@@ -112,13 +115,16 @@ func TestParse_MultipleValidFeeds(t *testing.T) {
     </item>
   </channel>
 </rss>`)
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
 	}))
 	defer server1.Close()
 
-	server2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+		_, err := fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
     <title>Feed 2</title>
@@ -130,6 +136,9 @@ func TestParse_MultipleValidFeeds(t *testing.T) {
     </item>
   </channel>
 </rss>`)
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
 	}))
 	defer server2.Close()
 
@@ -180,10 +189,10 @@ func TestParse_InvalidURL(t *testing.T) {
 
 func TestParse_MixedValidAndInvalidURLs(t *testing.T) {
 	// Create a valid mock server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+		_, err := fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
     <title>Valid Feed</title>
@@ -195,6 +204,9 @@ func TestParse_MixedValidAndInvalidURLs(t *testing.T) {
     </item>
   </channel>
 </rss>`)
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -217,9 +229,12 @@ func TestParse_MixedValidAndInvalidURLs(t *testing.T) {
 
 func TestParse_ServerError(t *testing.T) {
 	// Create a server that returns 500 error
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Internal Server Error")
+		_, err := fmt.Fprintf(w, "Internal Server Error")
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -237,10 +252,13 @@ func TestParse_ServerError(t *testing.T) {
 
 func TestParse_InvalidXML(t *testing.T) {
 	// Create a server that returns invalid XML
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "This is not valid XML")
+		_, err := fmt.Fprintf(w, "This is not valid XML")
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -258,11 +276,14 @@ func TestParse_InvalidXML(t *testing.T) {
 
 func TestParse_Timeout(t *testing.T) {
 	// Create a server that delays response
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(2 * time.Second) // Longer than the 30-second timeout
 		w.Header().Set("Content-Type", "application/rss+xml")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel></channel></rss>`)
+		_, err := fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel></channel></rss>`)
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -284,10 +305,10 @@ func TestParse_Timeout(t *testing.T) {
 
 func TestParse_ItemWithoutPublishedDate(t *testing.T) {
 	// Create a server that returns RSS without pubDate
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+		_, err := fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
     <title>Test Feed</title>
@@ -298,6 +319,9 @@ func TestParse_ItemWithoutPublishedDate(t *testing.T) {
     </item>
   </channel>
 </rss>`)
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -312,20 +336,18 @@ func TestParse_ItemWithoutPublishedDate(t *testing.T) {
 		t.Fatalf("Expected 1 item, got %d", len(items))
 	}
 
-	// Check that PublishDate is set to current time (approximately)
-	now := time.Now()
-	diff := now.Sub(items[0].PublishDate)
-	if diff < -time.Second || diff > time.Second {
-		t.Errorf("Expected PublishDate to be approximately now, got %v (diff: %v)", items[0].PublishDate, diff)
+	// Check that PublishDate is set to zero time when no date is available
+	if !items[0].PublishDate.IsZero() {
+		t.Errorf("Expected PublishDate to be zero time when no date available, got %v", items[0].PublishDate)
 	}
 }
 
 func TestParse_ItemWithUpdatedDate(t *testing.T) {
 	// Create a server that returns Atom format which has proper updated field
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/atom+xml")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+		_, err := fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>Test Feed</title>
   <entry>
@@ -335,6 +357,9 @@ func TestParse_ItemWithUpdatedDate(t *testing.T) {
     <updated>2006-01-02T15:04:05Z</updated>
   </entry>
 </feed>`)
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -362,10 +387,10 @@ func TestParse_ConcurrentRequests(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		i := i // Capture loop variable
-		servers[i] = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		servers[i] = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/rss+xml")
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+			_, err := fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
     <title>Feed %d</title>
@@ -377,6 +402,9 @@ func TestParse_ConcurrentRequests(t *testing.T) {
     </item>
   </channel>
 </rss>`, i+1, i+1, i+1, i+1)
+			if err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		}))
 		urls[i] = servers[i].URL
 		defer servers[i].Close()
@@ -433,11 +461,14 @@ func TestParse_EmptyFeed(t *testing.T) {
 
 func TestParse_ContextCancellation(t *testing.T) {
 	// Create a server that delays response
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(100 * time.Millisecond)
 		w.Header().Set("Content-Type", "application/rss+xml")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel></channel></rss>`)
+		_, err := fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel></channel></rss>`)
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
 	}))
 	defer server.Close()
 
