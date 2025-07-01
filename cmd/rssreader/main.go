@@ -1,3 +1,4 @@
+// Main entry point for the RSS reader CLI tool.
 package main
 
 import (
