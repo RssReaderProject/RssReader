@@ -38,7 +38,8 @@ func main() {
 
 	// Check if URLs are provided
 	if *urls == "" {
-		log.Fatal("Error: -urls flag is required. Use -help for usage information.")
+		log.Print("Error: -urls flag is required. Use -help for usage information.")
+		os.Exit(1)
 	}
 
 	// Parse URLs from comma-separated string
@@ -54,7 +55,8 @@ func main() {
 	}
 
 	if len(urlList) == 0 {
-		log.Fatal("Error: No valid URLs provided")
+		log.Print("Error: No valid URLs provided")
+		os.Exit(1)
 	}
 
 	// Create context with timeout
@@ -64,7 +66,8 @@ func main() {
 	// Parse RSS feeds
 	items, err := rssreader.Parse(ctx, urlList)
 	if err != nil {
-		log.Fatalf("Error parsing RSS feeds: %v", err)
+		log.Printf("Error parsing RSS feeds: %v", err)
+		os.Exit(1)
 	}
 
 	// Output results based on format
@@ -74,7 +77,8 @@ func main() {
 	case "text":
 		outputText(items)
 	default:
-		log.Fatalf("Unknown format: %s. Supported formats: json, text", *format)
+		log.Printf("Unknown format: %s. Supported formats: json, text", *format)
+		os.Exit(1)
 	}
 }
 
@@ -82,7 +86,8 @@ func outputJSON(items []rssreader.RssItem) {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(items); err != nil {
-		log.Fatalf("Error encoding JSON: %v", err)
+		log.Printf("Error encoding JSON: %v", err)
+		os.Exit(1)
 	}
 }
 

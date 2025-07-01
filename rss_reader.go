@@ -1,3 +1,4 @@
+// Package rssreader provides functionality for parsing RSS feeds.
 package rssreader
 
 import (
@@ -5,6 +6,7 @@ import (
 	"time"
 )
 
+// RssItem represents a single item from an RSS feed.
 type RssItem struct {
 	Title       string
 	Source      string
@@ -14,6 +16,8 @@ type RssItem struct {
 	Description string
 }
 
+// Parse fetches and parses RSS feeds from the provided URLs.
+// It returns a slice of RssItem and any error encountered during parsing.
 func Parse(ctx context.Context, urls []string) ([]RssItem, error) {
 	items := []RssItem{
 		{
