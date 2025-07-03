@@ -4,6 +4,7 @@ package rssreader
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -75,6 +76,11 @@ func Parse(ctx context.Context, urls []string) ([]RssItem, error) {
 	if len(errors) > 0 {
 		return allItems, fmt.Errorf("encountered %d errors: %v", len(errors), errors)
 	}
+
+	// Sort items by PublishDate
+	sort.Slice(allItems, func(i, j int) bool {
+		return allItems[i].PublishDate.Before(allItems[j].PublishDate) || allItems[i].PublishDate.Equal(allItems[j].PublishDate)
+	})
 
 	return allItems, nil
 }
