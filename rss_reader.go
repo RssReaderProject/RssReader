@@ -77,6 +77,11 @@ func Parse(ctx context.Context, urls []string) ([]RssItem, error) {
 		return allItems, fmt.Errorf("encountered %d errors: %v", len(errors), errors)
 	}
 
+	// Sort all items by PublishDate across all feeds
+	sort.Slice(allItems, func(i, j int) bool {
+		return allItems[i].PublishDate.Before(allItems[j].PublishDate) || allItems[i].PublishDate.Equal(allItems[j].PublishDate)
+	})
+
 	return allItems, nil
 }
 
@@ -115,11 +120,6 @@ func parseSingleFeed(ctx context.Context, url string) ([]RssItem, error) {
 
 		items = append(items, rssItem)
 	}
-
-	// Sort items by PublishDate
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].PublishDate.Before(items[j].PublishDate) || items[i].PublishDate.Equal(items[j].PublishDate)
-	})
 
 	return items, nil
 }
