@@ -91,10 +91,16 @@ func TestParse_SingleValidFeed(t *testing.T) {
 	if items[0].Description != "This is a test article" {
 		t.Errorf("Expected description 'This is a test article', got '%s'", items[0].Description)
 	}
+	if items[0].RssUrl != server.URL {
+		t.Errorf("Expected RssUrl '%s', got '%s'", server.URL, items[0].RssUrl)
+	}
 
 	// Check second item
 	if items[1].Title != "Test Article 2" {
 		t.Errorf("Expected title 'Test Article 2', got '%s'", items[1].Title)
+	}
+	if items[1].RssUrl != server.URL {
+		t.Errorf("Expected RssUrl '%s', got '%s'", server.URL, items[1].RssUrl)
 	}
 }
 
@@ -159,9 +165,15 @@ func TestParse_MultipleValidFeeds(t *testing.T) {
 	for _, item := range items {
 		if item.Source == "Feed 1" && item.Title == "Article from Feed 1" {
 			feed1Found = true
+			if item.RssUrl != server1.URL {
+				t.Errorf("Expected RssUrl '%s' for Feed 1 item, got '%s'", server1.URL, item.RssUrl)
+			}
 		}
 		if item.Source == "Feed 2" && item.Title == "Article from Feed 2" {
 			feed2Found = true
+			if item.RssUrl != server2.URL {
+				t.Errorf("Expected RssUrl '%s' for Feed 2 item, got '%s'", server2.URL, item.RssUrl)
+			}
 		}
 	}
 
@@ -224,6 +236,9 @@ func TestParse_MixedValidAndInvalidURLs(t *testing.T) {
 
 	if items[0].Title != "Valid Article" {
 		t.Errorf("Expected title 'Valid Article', got '%s'", items[0].Title)
+	}
+	if items[0].RssUrl != server.URL {
+		t.Errorf("Expected RssUrl '%s', got '%s'", server.URL, items[0].RssUrl)
 	}
 }
 

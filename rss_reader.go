@@ -19,6 +19,7 @@ type RssItem struct {
 	Link        string
 	PublishDate time.Time
 	Description string
+	RssUrl      string
 }
 
 // Parse fetches and parses RSS feeds from the provided URLs asynchronously.
@@ -101,6 +102,7 @@ func parseSingleFeed(ctx context.Context, url string) ([]RssItem, error) {
 			SourceURL:   url,
 			Link:        item.Link,
 			Description: item.Description,
+			RssUrl:      url,
 		}
 
 		// Handle publish date
