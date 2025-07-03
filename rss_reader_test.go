@@ -525,3 +525,172 @@ func TestParse_ItemWithMissingFields(t *testing.T) {
 		t.Errorf("Expected empty description for missing field, got '%s'", items[0].Description)
 	}
 }
+
+func TestParse_SortingByPublishDate(t *testing.T) {
+	// Create a mock server that returns RSS with items in random date order
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		w.WriteHeader(http.StatusOK)
+		_, err := fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Test Feed</title>
+    <link>http://example.com</link>
+    <description>A test RSS feed</description>
+    <item>
+      <title>Latest Article</title>
+      <link>http://example.com/latest</link>
+      <description>This is the latest article</description>
+      <pubDate>Wed, 04 Jan 2006 15:04:05 MST</pubDate>
+    </item>
+    <item>
+      <title>Earliest Article</title>
+      <link>http://example.com/earliest</link>
+      <description>This is the earliest article</description>
+      <pubDate>Mon, 02 Jan 2006 15:04:05 MST</pubDate>
+    </item>
+    <item>
+      <title>Middle Article</title>
+      <link>http://example.com/middle</link>
+      <description>This is the middle article</description>
+      <pubDate>Tue, 03 Jan 2006 15:04:05 MST</pubDate>
+    </item>
+    <item>
+      <title>Another Early Article</title>
+      <link>http://example.com/another-early</link>
+      <description>This is another early article</description>
+      <pubDate>Mon, 02 Jan 2006 10:00:00 MST</pubDate>
+    </item>
+  </channel>
+</rss>`)
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	ctx := context.Background()
+	items, err := Parse(ctx, []string{server.URL})
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(items) != 4 {
+		t.Fatalf("Expected 4 items, got %d", len(items))
+	}
+
+	// Verify items are sorted by publish date in ascending order
+	expectedOrder := []string{
+		"Another Early Article", // Mon, 02 Jan 2006 10:00:00 MST
+		"Earliest Article",      // Mon, 02 Jan 2006 15:04:05 MST
+		"Middle Article",        // Tue, 03 Jan 2006 15:04:05 MST
+		"Latest Article",        // Wed, 04 Jan 2006 15:04:05 MST
+	}
+
+	for i, expectedTitle := range expectedOrder {
+		if items[i].Title != expectedTitle {
+			t.Errorf("Item at position %d: expected '%s', got '%s'", i, expectedTitle, items[i].Title)
+		}
+	}
+
+	// Verify that dates are actually in ascending order
+	for i := 1; i < len(items); i++ {
+		if items[i].PublishDate.Before(items[i-1].PublishDate) {
+			t.Errorf("Items not sorted correctly: item %d (%s) has date %v which is before item %d (%s) with date %v",
+				i, items[i].Title, items[i].PublishDate,
+				i-1, items[i-1].Title, items[i-1].PublishDate)
+		}
+	}
+}
+
+func TestParse_SortingWithMultipleFeeds(t *testing.T) {
+	// Create two mock servers with items that should be interleaved when sorted
+	server1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		w.WriteHeader(http.StatusOK)
+		_, err := fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Feed 1</title>
+    <item>
+      <title>Feed 1 - Latest</title>
+      <link>http://example.com/feed1/latest</link>
+      <description>Latest from feed 1</description>
+      <pubDate>Wed, 04 Jan 2006 15:04:05 MST</pubDate>
+    </item>
+    <item>
+      <title>Feed 1 - Early</title>
+      <link>http://example.com/feed1/early</link>
+      <description>Early from feed 1</description>
+      <pubDate>Mon, 02 Jan 2006 15:04:05 MST</pubDate>
+    </item>
+  </channel>
+</rss>`)
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
+	}))
+	defer server1.Close()
+
+	server2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		w.WriteHeader(http.StatusOK)
+		_, err := fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Feed 2</title>
+    <item>
+      <title>Feed 2 - Middle</title>
+      <link>http://example.com/feed2/middle</link>
+      <description>Middle from feed 2</description>
+      <pubDate>Tue, 03 Jan 2006 15:04:05 MST</pubDate>
+    </item>
+    <item>
+      <title>Feed 2 - Earliest</title>
+      <link>http://example.com/feed2/earliest</link>
+      <description>Earliest from feed 2</description>
+      <pubDate>Mon, 02 Jan 2006 10:00:00 MST</pubDate>
+    </item>
+  </channel>
+</rss>`)
+		if err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
+	}))
+	defer server2.Close()
+
+	ctx := context.Background()
+	items, err := Parse(ctx, []string{server1.URL, server2.URL})
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(items) != 4 {
+		t.Fatalf("Expected 4 items total, got %d", len(items))
+	}
+
+	// Verify items are sorted by publish date across both feeds
+	expectedOrder := []string{
+		"Feed 2 - Earliest", // Mon, 02 Jan 2006 10:00:00 MST
+		"Feed 1 - Early",    // Mon, 02 Jan 2006 15:04:05 MST
+		"Feed 2 - Middle",   // Tue, 03 Jan 2006 15:04:05 MST
+		"Feed 1 - Latest",   // Wed, 04 Jan 2006 15:04:05 MST
+	}
+
+	for i, expectedTitle := range expectedOrder {
+		if items[i].Title != expectedTitle {
+			t.Errorf("Item at position %d: expected '%s', got '%s'", i, expectedTitle, items[i].Title)
+		}
+	}
+
+	// Verify that dates are actually in ascending order
+	for i := 1; i < len(items); i++ {
+		if items[i].PublishDate.Before(items[i-1].PublishDate) {
+			t.Errorf("Items not sorted correctly: item %d (%s) has date %v which is before item %d (%s) with date %v",
+				i, items[i].Title, items[i].PublishDate,
+				i-1, items[i-1].Title, items[i-1].PublishDate)
+		}
+	}
+}
